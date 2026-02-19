@@ -1,6 +1,6 @@
 import { getAuth } from "./auth.js";
 
-const BASE = "http://localhost:5000";
+const BASE = "https://furni-backend-dtz7.onrender.com";
 
 export async function api(path, options = {}) {
   const auth = getAuth();
