@@ -7,8 +7,11 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const authData = JSON.parse(localStorage.getItem("auth") || "{}");
-  const token = authData.token;
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  const authValue = localStorage.getItem("auth");
+  const authData = authValue ? JSON.parse(authValue) : null;
+
+  if (authData && authData.token) {
+    config.headers.Authorization = `Bearer ${authData.token}`;
+  }
   return config;
 });
