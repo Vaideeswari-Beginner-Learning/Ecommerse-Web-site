@@ -10,6 +10,6 @@
         "backend:install": "cd Backend && npm install",
         "backend:dev": "cd Backend && npm run dev",
         "install-all": "npm run frontend:install && npm run backend:install",
-        "build": "npm run frontend:build"
+        "build": "npm run frontend:build && cp -r Frontend/dist ./"
     }
 }
