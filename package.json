@@ -10,6 +10,6 @@
         "backend:install": "cd Backend && npm install",
         "backend:dev": "cd Backend && npm run dev",
         "install-all": "npm run frontend:install && npm run backend:install",
-        "build": "npm run frontend:build && cp -r webapp/dist ./"
+        "build": "npm run frontend:build && node -e \"const fs=require('fs'); if(fs.existsSync('dist')) fs.rmSync('dist', {recursive:true}); fs.cpSync('webapp/dist', 'dist', {recursive:true})\""
     }
 }
