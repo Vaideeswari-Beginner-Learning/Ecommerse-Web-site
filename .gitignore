@@ -7,6 +7,8 @@ node_modules/
 dist/
 **/build/
 build/
+webapp/dist/
+webapp/node_modules/
 
 # IDE and OS files
 .vscode/

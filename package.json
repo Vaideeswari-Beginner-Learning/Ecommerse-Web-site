@@ -4,12 +4,12 @@
     "description": "E-commerce project with Frontend and Backend",
     "private": true,
     "scripts": {
-        "frontend:install": "cd Frontend && npm install",
-        "frontend:build": "cd Frontend && npm run build",
-        "frontend:dev": "cd Frontend && npm run dev",
+        "frontend:install": "cd webapp && npm install",
+        "frontend:build": "cd webapp && npm run build",
+        "frontend:dev": "cd webapp && npm run dev",
         "backend:install": "cd Backend && npm install",
         "backend:dev": "cd Backend && npm run dev",
         "install-all": "npm run frontend:install && npm run backend:install",
-        "build": "npm run frontend:build && cp -r Frontend/dist ./"
+        "build": "npm run frontend:build && cp -r webapp/dist ./"
     }
 }
