@@ -36,22 +36,15 @@ const AdminDashboard = () => {
 
   const fetchProducts = async () => {
     try {
-      // Try fetching real data
-      // const res = await api.get("/products");
-      // if (Array.isArray(res.data)) setProducts(res.data);
-
-      // FOR DEMO: Allow LocalStorage to be the source of truth if API fails or for "Sync" feature
-      const saved = localStorage.getItem("products");
-      if (saved) {
-        setProducts(JSON.parse(saved));
-      } else {
-        // Initialize empty if needed
-        setProducts([]);
+      // Try fetching real data from Backend
+      const res = await api.get("/products");
+      if (Array.isArray(res.data)) {
+        setProducts(res.data);
+        // Sync LocalStorage for offline/demo if needed
+        localStorage.setItem("products", JSON.stringify(res.data));
       }
-
     } catch (err) {
-      console.error("Failed to fetch products", err);
-      // Fallback
+      console.warn("Failed to fetch products from DB, falling back to LocalStorage", err);
       const saved = localStorage.getItem("products");
       if (saved) setProducts(JSON.parse(saved));
     }
@@ -93,35 +86,47 @@ const AdminDashboard = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Ensure images is an array and price is a number
+    const imagesArray = typeof formData.images === "string"
+      ? formData.images.split(",").map(url => url.trim()).filter(url => url !== "")
+      : (Array.isArray(formData.images) ? formData.images : []);
+
     const payload = {
       ...formData,
-      images: formData.images.split(",").map(url => url.trim())
+      price: Number(formData.price),
+      images: imagesArray
     };
 
-    // Calculate New State first for Local Storage Sync
-    let newProducts = [...products];
-
-    // Optimistic Update
-    if (isEditing) {
-      newProducts = newProducts.map(p => p._id === editId ? { ...p, ...payload } : p);
-    } else {
-      newProducts.push({ _id: Date.now().toString(), ...payload });
-    }
-
-    // SYNC: Save to LocalStorage immediately (Main source for Demo)
-    localStorage.setItem("products", JSON.stringify(newProducts));
-    setProducts(newProducts); // Update UI
-    setMessage(isEditing ? "Product Updated (Demo/Local)!" : "Product Added (Demo/Local)!");
-
-    // Try Real Backend (Optional / Fire & Forget)
     try {
-      if (isEditing) await api.put(`/products/${editId}`, payload);
-      else await api.post("/products", payload);
-    } catch (err) {
-      console.warn("Backend sync failed, but saved locally.", err);
-    }
+      let result;
+      if (isEditing) {
+        result = await api.put(`/products/${editId}`, payload);
+        setMessage("Product Updated Successfully!");
+      } else {
+        result = await api.post("/products", payload);
+        setMessage("Product Added Successfully!");
+      }
 
-    resetForm();
+      // Refresh list from DB to ensure sync
+      fetchProducts();
+      resetForm();
+
+    } catch (err) {
+      console.error("Backend Error:", err);
+      const errorMsg = err.response?.data?.message || "Error connecting to Database.";
+      setMessage(`Sync Failed: ${errorMsg}. Saved to Demo Mode.`);
+
+      // Fallback: update local state anyway so user sees something
+      let newProducts = [...products];
+      if (isEditing) {
+        newProducts = newProducts.map(p => p._id === editId ? { ...p, ...payload, _id: editId } : p);
+      } else {
+        newProducts.push({ _id: `temp-${Date.now()}`, ...payload });
+      }
+      setProducts(newProducts);
+      localStorage.setItem("products", JSON.stringify(newProducts));
+    }
   };
 
   const resetForm = () => {

@@ -98,49 +98,30 @@ export default function Products() {
   const [products, setProducts] = useState([]);
 
   useEffect(() => {
-    // Initial Load & Sync
-    const loadProducts = () => {
-      const saved = localStorage.getItem("products");
-      let localProducts = [];
-
-      if (saved) {
-        localProducts = JSON.parse(saved);
-
-        // SYNC: Update existing products from code (productsData) to User Cache (localStorage)
-        // This ensures if we fix an image URL in code, the user sees it immediately
-        localProducts = localProducts.map(localP => {
-          const codeP = productsData.find(p => p.id === localP.id);
-          if (codeP) {
-            // Merge code data into local data (giving code data priority for essential fields)
-            return { ...localP, ...codeP };
-          }
-          return localP;
-        });
-
-
-        // SYNC: Add entirely new products from productsData
-        let hasNewData = false;
-        productsData.forEach(defaultProduct => {
-          if (!localProducts.find(p => p.id === defaultProduct.id)) {
-            localProducts.push(defaultProduct);
-            hasNewData = true;
-          }
-        });
-
-        // Always save back to update the cache with fresh code data
-        localStorage.setItem("products", JSON.stringify(localProducts));
-
-      } else {
-        localProducts = productsData;
-        localStorage.setItem("products", JSON.stringify(productsData));
+    const fetchProducts = async () => {
+      try {
+        const { api } = await import("../services/api");
+        const res = await api.get("/products");
+        if (Array.isArray(res.data)) {
+          setProducts(res.data);
+          localStorage.setItem("products", JSON.stringify(res.data));
+        }
+      } catch (err) {
+        console.warn("API Fetch failed, using LocalStorage backup", err);
+        const saved = localStorage.getItem("products");
+        if (saved) {
+          setProducts(JSON.parse(saved));
+        } else {
+          setProducts(productsData);
+        }
       }
-      setProducts(localProducts);
     };
 
-    loadProducts();
+    fetchProducts();
 
     const handleStorageChange = () => {
-      loadProducts();
+      const saved = localStorage.getItem("products");
+      if (saved) setProducts(JSON.parse(saved));
     };
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);

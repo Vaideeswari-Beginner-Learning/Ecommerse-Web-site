@@ -24,25 +24,9 @@ export default function Login() {
       else navigate("/dashboard/user");
 
     } catch (err) {
-      console.warn("Real Auth Failed, falling back to Demo Mode", err);
-
-      // 2. MOCK FALLBACK (for testing/demo purposes)
-      let data;
-      if (email === "admin@gmail.com") {
-        data = { token: "mock-admin-token", user: { name: "Admin", email, role: "admin" } };
-      } else if (email) {
-        data = { token: "mock-user-token", user: { name: "User", email, role: "user" } };
-      }
-
-      if (data) {
-        setAuth(data);
-        setAuth(data);
-        // alert("Running in Demo Mode (Mock Login)"); // Removed as requested
-        if (data.user.role === "admin") navigate("/dashboard/admin");
-        else navigate("/dashboard/user");
-      } else {
-        setError("Login Failed (Backend & Mock).");
-      }
+      console.error("Login Failed:", err);
+      const msg = err.response?.data?.message || "Invalid Email or Password. Please register a real account for Database Sync.";
+      setError(msg);
     }
   };
 

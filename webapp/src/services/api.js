@@ -1,7 +1,9 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: "https://furni-backend-dtz7.onrender.com/api"
+  baseURL: window.location.hostname === "localhost"
+    ? "http://localhost:5000/api"
+    : "https://furni-backend-dtz7.onrender.com/api"
 });
 
 api.interceptors.request.use((config) => {
