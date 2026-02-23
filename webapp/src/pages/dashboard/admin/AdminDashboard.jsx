@@ -1,12 +1,22 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../../../services/api";
+import { setAuth } from "../../../utils/auth";
 import "./AdminDashboard.css";
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [activeTab, setActiveTab] = useState("products"); // "products" or "users"
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
   const [imageError, setImageError] = useState(false);
+
+  const handleLogout = () => {
+    setAuth(null);
+    navigate("/");
+  };
 
   // Define Design Options per Category
   const categoryDesigns = {
@@ -32,7 +42,19 @@ const AdminDashboard = () => {
   // Force refresh products on mount
   useEffect(() => {
     fetchProducts();
+    fetchUsers();
   }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const res = await api.get("/auth");
+      if (Array.isArray(res.data)) {
+        setUsers(res.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch users", err);
+    }
+  };
 
   const fetchProducts = async () => {
     try {
@@ -131,7 +153,7 @@ const AdminDashboard = () => {
 
   const resetForm = () => {
     setFormData({
-      title: "", category: "Sofa", design: "", price: "", images: "", stock: 10, description: ""
+      title: "", category: "Sofa", design: "", material: [], size: [], price: "", images: "", stock: 10, description: ""
     });
     setIsEditing(false);
     setEditId(null);
@@ -153,6 +175,8 @@ const AdminDashboard = () => {
       title: product.title || product.name || "", // Handle legacy 'name'
       category: product.category,
       design: product.design || "",
+      material: product.material || [],
+      size: product.size || [],
       price: product.price,
       images: existingImages,
       stock: product.stock || 10,
@@ -192,150 +216,236 @@ const AdminDashboard = () => {
     setMessage("All products cleared!");
   };
 
+  const handleDeleteUser = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this user?")) return;
+
+    try {
+      await api.delete(`/auth/${id}`);
+      setMessage("User deleted successfully!");
+      fetchUsers();
+    } catch (err) {
+      console.error("Delete user failed", err);
+      setMessage("Failed to delete user.");
+    }
+  };
+
   return (
     <div className="admin-dashboard">
-      <h2>Admin Dashboard</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', background: 'white', padding: '15px 25px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <h2 style={{ margin: 0 }}>Admin Panel</h2>
+          <div className="tab-buttons" style={{ display: 'flex', gap: '10px' }}>
+            <button
+              onClick={() => setActiveTab("products")}
+              className={`admin-btn ${activeTab === "products" ? "primary" : "secondary"}`}
+              style={{ padding: '8px 15px' }}
+            >
+              Manage Products
+            </button>
+            <button
+              onClick={() => setActiveTab("users")}
+              className={`admin-btn ${activeTab === "users" ? "primary" : "secondary"}`}
+              style={{ padding: '8px 15px' }}
+            >
+              Manage Employees
+            </button>
+          </div>
+        </div>
+
+        <button
+          onClick={handleLogout}
+          style={{ padding: '10px 20px', background: '#ff4d4d', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}
+        >
+          Logout 🏃👋
+        </button>
+      </div>
 
       <div className="admin-container">
+        {message && <p className={`message ${message.includes("Error") || message.includes("Failed") ? "error" : "success"}`}>{message}</p>}
 
-        {/* TOP: FORM SECTION */}
-        <div className="form-section">
-          <h3>{isEditing ? "Edit Product" : "Add New Product"}</h3>
-          {message && <p className={`message ${message.includes("Error") ? "error" : "success"}`}>{message}</p>}
+        {activeTab === "products" ? (
+          <>
+            {/* TOP: FORM SECTION */}
+            <div className="form-section">
+              <h3>{isEditing ? "Edit Product" : "Add New Product"}</h3>
 
-          <form onSubmit={handleSubmit} className="admin-form">
-            <div className="form-row">
-              <div className="form-group">
-                <label>Product Name</label>
-                <input name="title" value={formData.title} onChange={handleChange} required />
-              </div>
-              <div className="form-group">
-                <label>Price (₹)</label>
-                <input type="number" name="price" value={formData.price} onChange={handleChange} required />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label>Category</label>
-                <select name="category" value={formData.category} onChange={handleChange}>
-                  <option value="Sofa">Sofa</option>
-                  <option value="Chair">Chair</option>
-                  <option value="Table">Table</option>
-                  <option value="Interior">Interior</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Design / Style</label>
-                <select name="design" value={formData.design} onChange={handleChange} required>
-                  <option value="">Select Design</option>
-                  {categoryDesigns[formData.category]?.map(design => (
-                    <option key={design} value={design}>{design}</option>
-                  ))}
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label>Material</label>
-                <div className="checkbox-group">
-                  {["Fabric", "Leather", "Wood", "Plastic", "Glass", "Metal"].map(m => (
-                    <label key={m} className="checkbox-label">
-                      <input
-                        type="checkbox"
-                        name="material"
-                        value={m}
-                        checked={formData.material?.includes(m)}
-                        onChange={handleCheckboxChange}
-                      />
-                      {m}
-                    </label>
-                  ))}
+              <form onSubmit={handleSubmit} className="admin-form">
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Product Name</label>
+                    <input name="title" value={formData.title} onChange={handleChange} required />
+                  </div>
+                  <div className="form-group">
+                    <label>Price (₹)</label>
+                    <input type="number" name="price" value={formData.price} onChange={handleChange} required />
+                  </div>
                 </div>
-              </div>
-              <div className="form-group">
-                <label>Size</label>
-                <div className="checkbox-group">
-                  {["Small", "Medium", "Large", "Standard"].map(s => (
-                    <label key={s} className="checkbox-label">
-                      <input
-                        type="checkbox"
-                        name="size"
-                        value={s}
-                        checked={formData.size?.includes(s)}
-                        onChange={handleCheckboxChange}
-                      />
-                      {s}
-                    </label>
-                  ))}
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Category</label>
+                    <select name="category" value={formData.category} onChange={handleChange}>
+                      <option value="Sofa">Sofa</option>
+                      <option value="Chair">Chair</option>
+                      <option value="Table">Table</option>
+                      <option value="Interior">Interior</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Design / Style</label>
+                    <select name="design" value={formData.design} onChange={handleChange} required>
+                      <option value="">Select Design</option>
+                      {categoryDesigns[formData.category]?.map(design => (
+                        <option key={design} value={design}>{design}</option>
+                      ))}
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            <div className="form-group">
-              <label>Image URL</label>
-              <div className="image-input-wrapper">
-                <input
-                  name="images"
-                  value={formData.images}
-                  onChange={handleChange}
-                  placeholder="Paste image URL here..."
-                  className={imageError ? "input-error" : ""}
-                />
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Material</label>
+                    <div className="checkbox-group">
+                      {["Fabric", "Leather", "Wood", "Plastic", "Glass", "Metal"].map(m => (
+                        <label key={m} className="checkbox-label">
+                          <input
+                            type="checkbox"
+                            name="material"
+                            value={m}
+                            checked={formData.material?.includes(m)}
+                            onChange={handleCheckboxChange}
+                          />
+                          {m}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Size</label>
+                    <div className="checkbox-group">
+                      {["Small", "Medium", "Large", "Standard"].map(s => (
+                        <label key={s} className="checkbox-label">
+                          <input
+                            type="checkbox"
+                            name="size"
+                            value={s}
+                            checked={formData.size?.includes(s)}
+                            onChange={handleCheckboxChange}
+                          />
+                          {s}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
 
-                <div style={{ textAlign: 'center', margin: '5px 0', color: '#888', fontSize: '0.8rem', fontWeight: 'bold' }}>OR</div>
+                <div className="form-group">
+                  <label>Image URL</label>
+                  <div className="image-input-wrapper">
+                    <input
+                      name="images"
+                      value={formData.images}
+                      onChange={handleChange}
+                      placeholder="Paste image URL here..."
+                      className={imageError ? "input-error" : ""}
+                    />
 
-                {/* Option 2: Upload */}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  style={{ padding: '5px' }}
-                />
-                {/* Live Preview & Error Handling */}
-                {formData.images && (
-                  <div className="image-preview-box">
-                    {!imageError ? (
-                      <img
-                        src={formData.images.split(',')[0]}
-                        alt="Preview"
-                        className="preview-img"
-                        onError={() => setImageError(true)}
-                      />
-                    ) : (
-                      <div className="preview-error">
-                        <span>⚠️ Unable to load image</span>
-                        <small>Check if the URL is correct and accessible.</small>
+                    <div style={{ textAlign: 'center', margin: '5px 0', color: '#888', fontSize: '0.8rem', fontWeight: 'bold' }}>OR</div>
+
+                    {/* Option 2: Upload */}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      style={{ padding: '5px' }}
+                    />
+                    {/* Live Preview & Error Handling */}
+                    {formData.images && (
+                      <div className="image-preview-box">
+                        {!imageError ? (
+                          <img
+                            src={formData.images.split(',')[0]}
+                            alt="Preview"
+                            className="preview-img"
+                            onError={() => setImageError(true)}
+                          />
+                        ) : (
+                          <div className="preview-error">
+                            <span>⚠️ Unable to load image</span>
+                            <small>Check if the URL is correct and accessible.</small>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Description</label>
+                  <textarea name="description" value={formData.description} onChange={handleChange} rows="3" />
+                </div>
+
+                <div className="form-actions">
+                  <button type="submit" className="admin-btn primary">{isEditing ? "Update Product" : "Add Product"}</button>
+                  {isEditing && <button type="button" onClick={resetForm} className="admin-btn secondary">Cancel</button>}
+                </div>
+              </form>
+            </div>
+
+            <div className="product-list-section">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                <h3>Existing Products</h3>
+                {products.length > 0 && (
+                  <button
+                    onClick={handleClearAll}
+                    style={{
+                      background: '#ff4d4d',
+                      color: 'white',
+                      border: 'none',
+                      padding: '8px 15px',
+                      borderRadius: '5px',
+                      cursor: 'pointer',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    Clear All Products
+                  </button>
                 )}
               </div>
+              {products.length === 0 ? (
+                <p className="no-products">No products found. Add one above!</p>
+              ) : (
+                <div className="admin-product-grid">
+                  {products.map(product => (
+                    <div className="admin-card" key={product._id}>
+                      <div className="card-img-wrap">
+                        <img src={Array.isArray(product.images) ? product.images[0] : product.images} alt={product.title} />
+                      </div>
+                      <div className="card-info">
+                        <h4>{product.title}</h4>
+                        <p className="card-price">₹ {product.price}</p>
+                        <p className="card-cat">{product.category} - {product.design}</p>
+                        <div className="card-actions">
+                          <button onClick={() => handleEdit(product)} className="edit-btn">Edit</button>
+                          <button onClick={() => handleDelete(product._id)} className="delete-btn">Delete</button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-
-            <div className="form-group">
-              <label>Description</label>
-              <textarea name="description" value={formData.description} onChange={handleChange} rows="3" />
-            </div>
-
-            <div className="form-actions">
-              <button type="submit" className="admin-btn primary">{isEditing ? "Update Product" : "Add Product"}</button>
-              {isEditing && <button type="button" onClick={resetForm} className="admin-btn secondary">Cancel</button>}
-            </div>
-          </form>
-        </div>
-
-        {/* BOTTOM: PRODUCT LIST CART TYPE */}
-        <div className="product-list-section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-            <h3>Existing Products</h3>
-            {products.length > 0 && (
+          </>
+        ) : (
+          /* USERS LIST SECTION */
+          <div className="product-list-section">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h3>Registered Employees / Users</h3>
               <button
-                onClick={handleClearAll}
+                onClick={() => window.location.href = '/register'}
                 style={{
-                  background: '#ff4d4d',
+                  background: '#28a745',
                   color: 'white',
                   border: 'none',
                   padding: '8px 15px',
@@ -344,34 +454,56 @@ const AdminDashboard = () => {
                   fontWeight: 'bold'
                 }}
               >
-                Clear All Products
+                + Add Employee
               </button>
+            </div>
+            {users.length === 0 ? (
+              <p className="no-products">No employees found.</p>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px' }}>
+                  <thead>
+                    <tr style={{ textAlign: 'left', borderBottom: '2px solid #eee' }}>
+                      <th style={{ padding: '12px' }}>Name</th>
+                      <th style={{ padding: '12px' }}>Email</th>
+                      <th style={{ padding: '12px' }}>Role</th>
+                      <th style={{ padding: '12px' }}>Joined</th>
+                      <th style={{ padding: '12px' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map(u => (
+                      <tr key={u._id} style={{ borderBottom: '1px solid #eee' }}>
+                        <td style={{ padding: '12px' }}>{u.name}</td>
+                        <td style={{ padding: '12px' }}>{u.email}</td>
+                        <td style={{ padding: '12px' }}>
+                          <span style={{
+                            padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem',
+                            background: u.role === 'admin' ? '#fff3cd' : '#e8f5e9',
+                            color: u.role === 'admin' ? '#856404' : '#2e7d32'
+                          }}>
+                            {u.role}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px' }}>{new Date(u.createdAt).toLocaleDateString()}</td>
+                        <td style={{ padding: '12px' }}>
+                          {u.email !== 'admin@gmail.com' && (
+                            <button
+                              onClick={() => handleDeleteUser(u._id)}
+                              style={{ background: '#dc3545', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer' }}
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
-          {products.length === 0 ? (
-            <p className="no-products">No products found. Add one above!</p>
-          ) : (
-            <div className="admin-product-grid">
-              {products.map(product => (
-                <div className="admin-card" key={product._id}>
-                  <div className="card-img-wrap">
-                    <img src={Array.isArray(product.images) ? product.images[0] : product.images} alt={product.title} />
-                  </div>
-                  <div className="card-info">
-                    <h4>{product.title}</h4>
-                    <p className="card-price">₹ {product.price}</p>
-                    <p className="card-cat">{product.category} - {product.design}</p>
-                    <div className="card-actions">
-                      <button onClick={() => handleEdit(product)} className="edit-btn">Edit</button>
-                      <button onClick={() => handleDelete(product._id)} className="delete-btn">Delete</button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
+        )}
       </div >
     </div >
   );

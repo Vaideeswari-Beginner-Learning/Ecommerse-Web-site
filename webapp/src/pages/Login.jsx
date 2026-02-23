@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { setAuth } from "../utils/auth.js";
 import { api } from "../services/api";
 import "./auth.css";
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -20,8 +21,9 @@ export default function Login() {
 
       if (!data) throw new Error("No response");
       setAuth(data);
-      if (data.user.role === "admin") navigate("/dashboard/admin");
-      else navigate("/dashboard/user");
+
+      const from = location.state?.from || (data.user.role === "admin" ? "/dashboard/admin" : "/dashboard/user");
+      navigate(from, { replace: true });
 
     } catch (err) {
       console.error("Login Failed:", err);
@@ -68,8 +70,8 @@ export default function Login() {
 
         <p className="auth-link" style={{ opacity: 0.7, fontSize: '0.9rem' }}>
           <b>Demo Credentials:</b><br />
-          Admin: admin@gmail.com<br />
-          User: (any other email)
+          Admin: admin@gmail.com / admin123<br />
+          User: (any other account)
         </p>
       </div>
     </div>

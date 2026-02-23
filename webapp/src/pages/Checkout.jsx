@@ -1,5 +1,5 @@
 import { useState, useContext, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { CartContext } from "../context/CartContext";
 import { getAuth, setAuth } from "../utils/auth";
 
@@ -176,16 +176,8 @@ export default function Checkout() {
     };
 
     // --- AUTH HANDLERS ---
-    const handleLoginSubmit = (e) => {
-        e.preventDefault();
-        if (phone.length < 10) {
-            alert("Please enter a valid phone number");
-            return;
-        }
-        const mockUser = { name: "Guest User", email: phone + "@example.com", role: "user" };
-        setAuth({ user: mockUser, token: "mock-token" });
-        setUser(mockUser);
-        setStep(1);
+    const handleLoginRedirect = () => {
+        navigate("/login", { state: { from: "/checkout" } });
     };
 
     const handleAddressSubmit = (e) => {
@@ -209,15 +201,17 @@ export default function Checkout() {
                     {step > 0 && user && <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{user.email.split('@')[0]} ✅</span>}
                 </div>
                 {step === 0 && (
-                    <div style={{ marginTop: '20px' }}>
-                        <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '20px' }}>Sign Up to save your order</p>
-                        <form onSubmit={handleLoginSubmit} style={{ maxWidth: '400px' }}>
-                            <div style={{ position: 'relative', marginBottom: '20px' }}>
-                                <span style={{ position: 'absolute', top: '12px', left: '0', fontSize: '0.9rem', color: '#333', borderRight: '1px solid #ccc', paddingRight: '10px' }}>IN +91</span>
-                                <input type="text" placeholder="Phone Number" value={phone} onChange={(e) => setPhone(e.target.value)} style={{ width: '100%', padding: '10px 10px 10px 60px', border: 'none', borderBottom: '1px solid #2874f0', outline: 'none', fontSize: '1rem' }} maxLength={10} required />
-                            </div>
-                            <button style={{ width: '100%', padding: '15px', background: '#fb641b', color: 'white', border: 'none', borderRadius: '2px', fontSize: '1rem', fontWeight: 700, cursor: 'pointer', marginTop: '10px', textTransform: 'uppercase' }}>Continue</button>
-                        </form>
+                    <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                        <p style={{ fontSize: '1rem', color: '#666', marginBottom: '20px' }}>Please login to complete your order safely.</p>
+                        <button
+                            onClick={handleLoginRedirect}
+                            style={{ width: '100%', maxWidth: '300px', padding: '15px', background: '#fb641b', color: 'white', border: 'none', borderRadius: '2px', fontSize: '1rem', fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase' }}
+                        >
+                            Login to Proceed
+                        </button>
+                        <p style={{ marginTop: '15px', color: '#878787', fontSize: '0.9rem' }}>
+                            New user? <Link to="/register" style={{ color: '#2874f0', textDecoration: 'none' }}>Create an account</Link>
+                        </p>
                     </div>
                 )}
             </div>

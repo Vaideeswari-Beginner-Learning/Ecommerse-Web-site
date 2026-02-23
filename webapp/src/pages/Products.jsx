@@ -129,6 +129,9 @@ export default function Products() {
 
   // Filter Logic
   const [priceRange, setPriceRange] = useState(100000);
+  const [materialFilters, setMaterialFilters] = useState([]);
+  const [sizeFilters, setSizeFilters] = useState([]);
+
   // Search State
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -143,12 +146,32 @@ export default function Products() {
     const designMatch = designFilter === "All" || (p.design && p.design.includes(designFilter));
     const priceMatch = p.price <= priceRange;
 
+    // Material Filter (OR logic within groups)
+    const materialMatch = materialFilters.length === 0 ||
+      (p.material && p.material.some(m => materialFilters.includes(m)));
+
+    // Size Filter (OR logic within groups)
+    const sizeMatch = sizeFilters.length === 0 ||
+      (p.size && p.size.some(s => sizeFilters.includes(s)));
+
     // Search Filter
     const searchLower = searchQuery.toLowerCase();
     const nameMatch = (p.name || p.title || "").toLowerCase().includes(searchLower);
 
-    return categoryMatch && designMatch && priceMatch && nameMatch;
+    return categoryMatch && designMatch && priceMatch && nameMatch && materialMatch && sizeMatch;
   });
+
+  const handleFilterChange = (type, value) => {
+    if (type === "material") {
+      setMaterialFilters(prev =>
+        prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
+      );
+    } else if (type === "size") {
+      setSizeFilters(prev =>
+        prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
+      );
+    }
+  };
 
   const handleBookNow = (product) => {
     // Check if product is valid structure
@@ -261,10 +284,48 @@ export default function Products() {
               <input
                 type="range" min="0" max="100000" step="1000"
                 value={priceRange} onChange={(e) => setPriceRange(Number(e.target.value))}
-                style={{ width: '100%', cursor: 'pointer' }}
+                style={{
+                  width: '100%',
+                  cursor: 'pointer',
+                  accentColor: '#008080' // Teal color from screenshot
+                }}
               />
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#666' }}>
                 <span>₹0</span><span>₹{priceRange}</span>
+              </div>
+            </div>
+
+            {/* Material Filter */}
+            <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
+              <h4 style={{ marginBottom: '10px', color: '#444' }}>Material</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {["Fabric", "Leather", "Wood", "Plastic", "Glass", "Metal"].map(m => (
+                  <label key={m} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={materialFilters.includes(m)}
+                      onChange={() => handleFilterChange("material", m)}
+                    />
+                    {m}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Size Filter */}
+            <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
+              <h4 style={{ marginBottom: '10px', color: '#444' }}>Size</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {["Small", "Medium", "Large", "Standard"].map(s => (
+                  <label key={s} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={sizeFilters.includes(s)}
+                      onChange={() => handleFilterChange("size", s)}
+                    />
+                    {s}
+                  </label>
+                ))}
               </div>
             </div>
           </div>
